@@ -1,222 +1,158 @@
-// DARK MODE
+// LOAD TASKS
+let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
 
-function toggleDarkMode(){
-
-document.body.classList.toggle("dark")
-
-localStorage.setItem("darkMode",
-document.body.classList.contains("dark"))
-
-}
-
-if(localStorage.getItem("darkMode") === "true"){
-
-document.body.classList.add("dark")
-
-}
-
-
-
-// DATE SYSTEM
-
-let tasks=[]
-
-let currentDate=new Date()
+let currentDate = new Date();
 
 function formatDate(date){
-
-return date.toISOString().split("T")[0]
-
+return date.toISOString().split("T")[0];
 }
 
+// DISPLAY CURRENT DATE
 function displayDate(){
+document.getElementById("currentDate").innerText =
+currentDate.toDateString();
 
-document.getElementById("currentDate").innerText=currentDate.toDateString()
-
-displayTasks()
-
+displayTasks();
 }
 
+// CHANGE DAY
 function changeDay(step){
-
-currentDate.setDate(currentDate.getDate()+step)
-
-displayDate()
-
+currentDate.setDate(currentDate.getDate()+step);
+displayDate();
 }
-
-
-
-// FIREBASE CLOUD SYNC
-
-const firebaseConfig = {
-
-apiKey: "YOUR_API_KEY",
-
-authDomain: "YOUR_PROJECT.firebaseapp.com",
-
-projectId: "YOUR_PROJECT_ID",
-
-storageBucket: "YOUR_PROJECT.appspot.com",
-
-messagingSenderId: "XXXX",
-
-appId: "XXXX"
-
-}
-
-firebase.initializeApp(firebaseConfig)
-
-const db = firebase.firestore()
-
-
 
 // ADD TASK
-
 function addTask(){
 
-let text=document.getElementById("taskInput").value
+let text = document.getElementById("taskInput").value;
+let type = document.getElementById("taskType").value;
 
-let type=document.getElementById("taskType").value
+if(text === "") return;
 
-if(text==="") return
-
-let task={
-
-text,
-
-type,
-
+tasks.push({
+text:text,
+type:type,
 date:formatDate(currentDate),
+completed:false,
+reason:""
+});
 
-completed:false
+save();
+displayTasks();
 
+document.getElementById("taskInput").value="";
 }
-
-tasks.push(task)
-
-saveToCloud(task)
-
-displayTasks()
-
-}
-
-
-
-// SAVE TO CLOUD
-
-function saveToCloud(task){
-
-db.collection("tasks").add(task)
-
-}
-
-
-
-// LOAD FROM CLOUD
-
-function loadTasks(){
-
-db.collection("tasks").get().then(snapshot=>{
-
-tasks=[]
-
-snapshot.forEach(doc=>{
-
-tasks.push(doc.data())
-
-})
-
-displayTasks()
-
-})
-
-}
-
-
 
 // DISPLAY TASKS
-
 function displayTasks(){
 
-let list=document.getElementById("taskList")
+let list = document.getElementById("taskList");
+list.innerHTML="";
 
-list.innerHTML=""
-
-let date=formatDate(currentDate)
+let today = formatDate(currentDate);
 
 tasks.forEach((task,i)=>{
 
-if(task.date===date){
+if(task.date === today){
 
-let li=document.createElement("li")
+let li = document.createElement("li");
 
-li.innerHTML=`
-
+li.innerHTML = `
 <input type="checkbox"
-
-${task.completed?"checked":""}
-
+${task.completed ? "checked":""}
 onclick="toggleTask(${i})">
 
+<span class="${task.completed ? "completed":""}">
 ${task.text}
+</span>
 
-`
+<button onclick="deleteTask(${i})">❌</button>
 
-list.appendChild(li)
+${task.reason ? `<div class="reason">Reason: ${task.reason}</div>` : ""}
+`;
+
+list.appendChild(li);
+}
+
+});
 
 }
 
-})
-
-}
-
-
-
-// COMPLETE TASK
-
+// TOGGLE TASK
 function toggleTask(i){
 
-tasks[i].completed=!tasks[i].completed
+if(tasks[i].completed){
 
-displayTasks()
+let reason = prompt("Why didn't you complete this task?");
+
+if(reason === null || reason.trim() === ""){
+alert("Please enter a reason before unchecking.");
+displayTasks();
+return;
+}
+
+tasks[i].completed=false;
+tasks[i].reason=reason;
+
+}else{
+
+tasks[i].completed=true;
+tasks[i].reason="";
 
 }
 
+save();
+displayTasks();
+}
 
+// DELETE TASK
+function deleteTask(i){
+tasks.splice(i,1);
+save();
+displayTasks();
+}
 
-displayDate()
+// SAVE
+function save(){
+localStorage.setItem("tasks",JSON.stringify(tasks));
+}
 
-loadTasks()
+// DARK MODE
+function toggleDarkMode(){
 
+document.body.classList.toggle("dark");
 
+localStorage.setItem(
+"darkMode",
+document.body.classList.contains("dark")
+);
+
+}
+
+if(localStorage.getItem("darkMode")==="true"){
+document.body.classList.add("dark");
+}
 
 // SWIPE NAVIGATION
-
-let startX=0
+let startX=0;
 
 document.addEventListener("touchstart",e=>{
-
-startX=e.touches[0].clientX
-
-})
+startX=e.touches[0].clientX;
+});
 
 document.addEventListener("touchend",e=>{
 
-let endX=e.changedTouches[0].clientX
+let endX=e.changedTouches[0].clientX;
 
-if(startX-endX>50) changeDay(1)
-
-if(endX-startX>50) changeDay(-1)
-
-})
-
-
-
-// SERVICE WORKER
-
-if("serviceWorker" in navigator){
-
-navigator.serviceWorker.register("service-worker.js")
-
+if(startX-endX>50){
+changeDay(1);
 }
+
+if(endX-startX>50){
+changeDay(-1);
+}
+
+});
+
+// INIT
+displayDate();
